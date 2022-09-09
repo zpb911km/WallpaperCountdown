@@ -60,12 +60,7 @@ def set_wallpaper(img_path):
 
 if __name__ == '__main__':
     while True:
-        #while True:
-        #    with open(os.path.join(path, 'setting.json'), encoding='utf-8') as st:
-        #        backMode = json.load(st)
-        #    if a != delta(backMode["yy"], backMode["mm"], backMode["dd"]) or BM != backMode["update"]:
-        #        break
-        #    break
+        
         with open((path), encoding='utf-8') as st:
             backMode = json.load(st)
         try:
