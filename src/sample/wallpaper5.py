@@ -28,7 +28,7 @@ def write_line(backimg, text):  # 给单个文本框填充数据
     draw = ImageDraw.Draw(backimg)
     tend = len(text)
     draw.text((px, py), text[:tend], font=myfont, fill=backMode["text_color"])
-    return backimg, tend
+    return backimg
 
 
 def write_text(img, text):
@@ -50,7 +50,7 @@ def write_text(img, text):
 
 def make_pic(mode, text):
     img = Image.open(mode["sourse_pic"])
-    img = write_text(img, text)
+    img = write_line(img, text)
     img.save(mode["output_pic"], quality=100)
 
 
@@ -67,7 +67,7 @@ if __name__ == '__main__':
             backMode["text"] = backMode["textf"] + str(delta(backMode["yy"], backMode["mm"], backMode["dd"], backMode["hh"], backMode["m"]))+backMode["textl"]
             make_pic(backMode, backMode["text"])
             set_wallpaper(backMode["output_pic"])
-            sleep(2)#这个sleep不能删除，否则无法顺利保存图片，导致OSError
+            sleep(58)#这个sleep不能删除，否则无法顺利保存图片，导致OSError
         except OSError:
             set_wallpaper(backMode["sourse_pic"])
         except KeyboardInterrupt:#方便测试，可以省略

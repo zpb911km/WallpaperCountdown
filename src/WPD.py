@@ -21,39 +21,17 @@ def delta(yy, mm, dd, hh, m):
     return str(day)
 
 
-def write_line(backimg, text):  # 给单个文本框填充数据
+def make_pic(mode, text):
     with open((path), encoding='utf-8') as st:
         backMode = json.load(st)
-    px = backimg.size[0]*backMode["text_x"]
-    py = backimg.size[1]*backMode["text_y"]
-    sz = int(backimg.size[0]*backMode["text_size"])
+    img = Image.open(mode["sourse_pic"])
+    px = img.size[0]*backMode["text_x"]
+    py = img.size[1]*backMode["text_y"]
+    sz = int(img.size[0]*backMode["text_size"])
     myfont = ImageFont.truetype(backMode["font"], size=sz)
-    draw = ImageDraw.Draw(backimg)
+    draw = ImageDraw.Draw(img)
     tend = len(text)
     draw.text((px, py), text[:tend], font=myfont, fill=backMode["text_color"])
-    return backimg, tend
-
-
-def write_text(img, text):
-    tlist = text.split("\n")
-    mnum = 0
-    for t in tlist:
-        tbegin = 0
-        tend = len(t)
-        while True:
-            img, tend = write_line(img, t[tbegin:tend])
-            mnum += 1
-            if tbegin + tend == len(t):
-                break
-            else:
-                tbegin = tbegin + tend
-                tend = len(t)
-    return img
-
-
-def make_pic(mode, text):
-    img = Image.open(mode["sourse_pic"])
-    img = write_text(img, text)
     img.save(mode["output_pic"], quality=100)
 
 
