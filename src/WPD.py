@@ -68,9 +68,9 @@ def main():
         backMode["text"] = backMode["textf"] + str(delta(backMode["yy"], backMode["mm"], backMode["dd"], backMode["hh"], backMode["m"]))+backMode["textl"]
         make_pic(backMode, backMode["text"])
         set_wallpaper(backMode["output_pic"])
-        return [hour, minute, second, 0]           #返回0代表没出错
+        exit(0)           #返回0代表没出错
     except OSError:
         set_wallpaper(backMode["sourse_pic"])
-        return [0, 0, 0, 1]                        #返回1代表OSError
+        exit(1)                        #返回1代表OSError
     except KeyboardInterrupt:                      #方便测试，可以省略
         set_wallpaper(backMode["sourse_pic"])
