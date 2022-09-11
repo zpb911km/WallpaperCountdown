@@ -1,0 +1,18 @@
+{
+    "event": "高考",
+    "scheduled_time": "2023-06-07 09:00:00",
+    "pic": {
+        "rel_folder_path": "img",
+        "original_file": "4067592958_efefe7d680_o.jpg"
+    },
+    "font_path": "C:/WINDOWS/Fonts/STXINGKA.TTF",
+    "text": {
+        "template": "距%(event)s还有%(day)d天",
+        "position": {
+            "x": 0.5,
+            "y": 0.25
+        },
+        "size": 0.05,
+        "color": "#f0eef5"
+    }
+}
