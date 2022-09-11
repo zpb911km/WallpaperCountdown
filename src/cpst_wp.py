@@ -86,7 +86,7 @@ if __name__ == '__main__':
     except Exception:
         # 捕获所有非系统异常，并将信息输出至日志文件。
         import traceback
-        with open(os.path.join(PATH_PREFIX, 'log.txt'), encoding='UTF-8') as file:
+        with open(os.path.join(PATH_PREFIX, 'log.txt'), 'a', encoding='UTF-8') as file:
             file.write(datetime.strftime(datetime.today(), r'%Y-%m-%d %H:%M:%S'))
             file.write('\n')
             file.write('An unhandled exception occured while the program was running:\n')
