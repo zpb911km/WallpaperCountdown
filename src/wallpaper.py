@@ -1,34 +1,59 @@
 import os.path
 import random
-from ctypes import windll
+from ctypes import windll, cast, POINTER
 from datetime import datetime, timedelta
 from time import sleep
-
 from PIL import Image, ImageDraw, ImageFont
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
+
+devices = AudioUtilities.GetSpeakers()
+interface = devices.Activate(
+    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+volume = cast(interface, POINTER(IAudioEndpointVolume))
+vr = volume.GetVolumeRange()
 
 PATH_PREFIX: str = os.path.split(__file__)[0]
 CONFIGURATION: dict = {
     'time': datetime(datetime.today().year, 6, 7, 9),
-    'font': r'C:/Windows/Fonts/STXINWEI.TTF',
+    'font': r'E:/wallpaper/Fonts/STXINWEI.TTF',
     'image': {
-        'origin_path': os.path.join(PATH_PREFIX, 'origin.jpg'),
-        'output_path': os.path.join(PATH_PREFIX, 'output.jpg'),
+        'origin_path': r'E:/wallpaper/R-C.jpg',
+        'output_path': r'E:/wallpaper/output.png',  # TODO:增加相对路径的调用
     },
     'text': {
         'content': '距离高考还有：%d天%d小时%d分钟',
         'x_position': 0.5,
-        'y_position': 0.7,
+        'y_position': 0.75,
         'size': 0.05,
         'color': '#f0eef5'
     },
     'glurge': {
-        'path': os.path.join(PATH_PREFIX, 'glurge.txt'),
+        'path': r'E:/wallpaper/glurge.txt',
         'size': 0.03,
-        'offset': 0.08,
+        'offset': 0.1,
         'color': '#f0eef5'
     }
 }
+
+
+def volume_control():
+    devices = AudioUtilities.GetSpeakers()
+    interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    volume = cast(interface, POINTER(IAudioEndpointVolume))
+    vr = volume.GetVolumeRange()  # 这一段用于防止切换设备，但是频繁操作中会出现随机性错误，pass掉即可
+    if datetime.now().hour == 12 and datetime.now().minute >= 20:
+        if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
+            volume.SetMasterVolumeLevel(vr[0], None)
+    elif datetime.now().hour == 17 and datetime.now().minute >= 15:
+        if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
+            volume.SetMasterVolumeLevel(vr[0], None)
+    elif datetime.now().hour == 18 and datetime.now().minute <= 10:
+        if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
+            volume.SetMasterVolumeLevel(vr[0], None)
+    else:
+        pass
 
 
 def calc_deltatime() -> tuple[int, int, int]:
@@ -76,7 +101,7 @@ def draw_image(text: str, *, with_glurge: bool = True):
                 pass
 
         # 保存图片
-        img.save(CONFIGURATION['image']['output_path'], quality=95)
+        img.save(CONFIGURATION['image']['output_path'], quality=100)
         # The image quality, on a scale from 0 (worst) to 95 (best), or the string keep.
         # The default is 75. Values above 95 should be avoided;
         # 100 disables portions of the JPEG compression algorithm,
@@ -94,9 +119,12 @@ if __name__ == '__main__':
         try:
             draw_image(CONFIGURATION['text']['content'] % calc_deltatime(), with_glurge=True)
             set_wallpaper(CONFIGURATION['image']['output_path'])
-            sleep(23)  # 这个sleep不能删除，否则无法顺利保存图片，导致OSError
-        except OSError:
-            set_wallpaper(CONFIGURATION['image']['origin_path'])
+            for i in range(8):
+                try:
+                    volume_control()
+                except Exception:
+                    pass
+                sleep(3)  # 在延时中控制音量，延时24s
         except KeyboardInterrupt:  # 方便测试，可以省略
             set_wallpaper(CONFIGURATION['image']['origin_path'])
             exit()
