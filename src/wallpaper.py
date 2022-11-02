@@ -19,8 +19,8 @@ CONFIGURATION: dict = {
     'time': datetime(datetime.today().year, 6, 7, 9),
     'font': r'E:/wallpaper/Fonts/STXINWEI.TTF',
     'image': {
-        'origin_path': r'E:/wallpaper/R-C.jpg',
-        'output_path': r'E:/wallpaper/output.png',  # TODO:增加相对路径的调用
+        'origin_path': os.path.join(PATH_PREFIX, 'origin.jpg'),
+        'output_path': os.path.join(PATH_PREFIX, 'output.jpg'),  # TODO:增加相对路径的调用
     },
     'text': {
         'content': '距离高考还有：%d天%d小时%d分钟',
@@ -30,7 +30,7 @@ CONFIGURATION: dict = {
         'color': '#f0eef5'
     },
     'glurge': {
-        'path': r'E:/wallpaper/glurge.txt',
+        'path': os.path.join(PATH_PREFIX, 'glurge.txt'),
         'size': 0.03,
         'offset': 0.1,
         'color': '#f0eef5'
@@ -39,19 +39,23 @@ CONFIGURATION: dict = {
 
 
 def volume_control():
-    devices = AudioUtilities.GetSpeakers()
-    interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    volume = cast(interface, POINTER(IAudioEndpointVolume))
-    vr = volume.GetVolumeRange()  # 这一段用于防止切换设备，但是频繁操作中会出现随机性错误，pass掉即可
-    if datetime.now().hour == 12 and datetime.now().minute >= 20:
+    
+    if (datetime.now().hour == 17 and datetime.now().minute >= 15) or (datetime.now().hour == 18 and datetime.now().minute <= 10):
+        devices = AudioUtilities.GetSpeakers()
+        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+        volume = cast(interface, POINTER(IAudioEndpointVolume))
+        vr = volume.GetVolumeRange()  # 这一段用于防止切换设备，但是频繁操作中会出现随机性错误，pass掉即可
         if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
             volume.SetMasterVolumeLevel(vr[0], None)
-    elif datetime.now().hour == 17 and datetime.now().minute >= 15:
+    elif (datetime.now().hour == 12 and datetime.now().minute >= 20) and (datetime.now().hour == 12 and datetime.now().minute <= 50):
+        devices = AudioUtilities.GetSpeakers()
+        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+        volume = cast(interface, POINTER(IAudioEndpointVolume))
+        vr = volume.GetVolumeRange()  # 这一段用于防止切换设备，但是频繁操作中会出现随机性错误，pass掉即可
         if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
-            volume.SetMasterVolumeLevel(vr[0], None)
-    elif datetime.now().hour == 18 and datetime.now().minute <= 10:
-        if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
-            volume.SetMasterVolumeLevel(vr[0], None)
+            volume.SetMasterVolumeLevel(vr[0]/3, None)  # 新闻联播，留声音
+    elif (datetime.now().hour == 12 and datetime.now().minute == 51) or (datetime.now().hour == 18 and datetime.now().minute == 11) or:
+        volume.SetMasterVolumeLevel(vr[0]/10, None)
     else:
         pass
 
@@ -89,10 +93,15 @@ def draw_image(text: str, *, with_glurge: bool = True):
         if with_glurge:
             try:
                 with open(CONFIGURATION['glurge']['path'], encoding='UTF-8') as file:
+                    head = file.readline()
+                    if head[0] == '@':
+                        txt = head[1:]
+                    else:
+                        txt = random.choice(file.readlines())  # 检查公告
                     ImageDraw.Draw(img).text(
                         xy=(img.size[0] * CONFIGURATION['text']['x_position'],
                             img.size[1] * (CONFIGURATION['text']['y_position'] + CONFIGURATION['glurge']['offset'])),
-                        text=random.choice(file.readlines()),
+                        text=txt,
                         font=ImageFont.truetype(CONFIGURATION['font'], size=int(img.size[0] * CONFIGURATION['glurge']['size'])),
                         anchor='mm',
                         fill=CONFIGURATION['text']['color']
@@ -119,12 +128,13 @@ if __name__ == '__main__':
         try:
             draw_image(CONFIGURATION['text']['content'] % calc_deltatime(), with_glurge=True)
             set_wallpaper(CONFIGURATION['image']['output_path'])
-            for i in range(8):
-                try:
-                    volume_control()
-                except Exception:
-                    pass
-                sleep(3)  # 在延时中控制音量，延时24s
+            try:
+                volume_control()
+            except Exception:
+                pass
+            sleep(23)  # 在延时中控制音量，延时24s
         except KeyboardInterrupt:  # 方便测试，可以省略
             set_wallpaper(CONFIGURATION['image']['origin_path'])
             exit()
+        except Exception:
+            pass
