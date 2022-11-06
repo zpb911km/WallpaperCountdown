@@ -1,18 +1,13 @@
+import asyncio
 import os.path
 import random
-from ctypes import windll, cast, POINTER
+import time
+from ctypes import POINTER, cast, windll
 from datetime import datetime, timedelta
-from time import sleep
-from PIL import Image, ImageDraw, ImageFont
+
 from comtypes import CLSCTX_ALL
+from PIL import Image, ImageDraw, ImageFont
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-
-
-devices = AudioUtilities.GetSpeakers()
-interface = devices.Activate(
-    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-volume = cast(interface, POINTER(IAudioEndpointVolume))
-vr = volume.GetVolumeRange()
 
 PATH_PREFIX: str = os.path.split(__file__)[0]
 CONFIGURATION: dict = {
@@ -36,28 +31,6 @@ CONFIGURATION: dict = {
         'color': '#f0eef5'
     }
 }
-
-
-def volume_control():
-    
-    if (datetime.now().hour == 17 and datetime.now().minute >= 15) or (datetime.now().hour == 18 and datetime.now().minute <= 10):
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        vr = volume.GetVolumeRange()  # 这一段用于防止切换设备，但是频繁操作中会出现随机性错误，pass掉即可
-        if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
-            volume.SetMasterVolumeLevel(vr[0], None)
-    elif (datetime.now().hour == 12 and datetime.now().minute >= 20) and (datetime.now().hour == 12 and datetime.now().minute <= 50):
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        vr = volume.GetVolumeRange()  # 这一段用于防止切换设备，但是频繁操作中会出现随机性错误，pass掉即可
-        if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
-            volume.SetMasterVolumeLevel(vr[0]/8, None)  # 新闻联播，留声音
-    elif (datetime.now().hour == 12 and datetime.now().minute == 51) or (datetime.now().hour == 18 and datetime.now().minute == 11):
-        volume.SetMasterVolumeLevel(vr[0]/10, None)
-    else:
-        pass
 
 
 def calc_deltatime() -> tuple[int, int, int]:
@@ -93,19 +66,22 @@ def draw_image(text: str, *, with_glurge: bool = True):
         if with_glurge:
             try:
                 with open(CONFIGURATION['glurge']['path'], encoding='UTF-8') as file:
-                    head = file.readline()
-                    if head[0] == '@':
-                        txt = head[1:]
+                    # 检查公告
+                    content: list[str] = file.readlines()
+                    if content[0].startswith('@'):
+                        text = content[0][1:]
                     else:
-                        txt = random.choice(file.readlines())  # 检查公告
+                        text = random.choice(content)
+
                     ImageDraw.Draw(img).text(
                         xy=(img.size[0] * CONFIGURATION['text']['x_position'],
                             img.size[1] * (CONFIGURATION['text']['y_position'] + CONFIGURATION['glurge']['offset'])),
-                        text=txt,
+                        text=text,
                         font=ImageFont.truetype(CONFIGURATION['font'], size=int(img.size[0] * CONFIGURATION['glurge']['size'])),
                         anchor='mm',
                         fill=CONFIGURATION['text']['color']
                     )
+
             except FileNotFoundError:
                 pass
 
@@ -119,24 +95,62 @@ def draw_image(text: str, *, with_glurge: bool = True):
         # and will retain the original image quality level, subsampling, and qtables.
 
 
-def set_wallpaper(img_path):
-    windll.user32.SystemParametersInfoW(20, 0, img_path, 0)
+async def set_wallpaper() -> None:
+    while True:
+        start_time: float = time.monotonic()
+        draw_image(CONFIGURATION['text']['content'] % calc_deltatime(), with_glurge=True)
+        set_wallpaper(CONFIGURATION['image']['output_path'])
+        windll.user32.SystemParametersInfoW(0x14, 0, CONFIGURATION['image']['origin_path'], 0)
+        await asyncio.sleep(60 - (time.monotonic() - start_time))
+
+
+async def adjust_volume() -> None:
+    global x_count
+
+    while True:
+        now: datetime = datetime.now()
+        # 新闻联播：每30s检查一次
+        if now.hour == 12 and 20 <= now.minute <= 50:
+            v_device = cast(AudioUtilities.GetSpeakers().Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None),
+                            POINTER(IAudioEndpointVolume))
+            if v_device.GetMasterVolumeLevelScalar() != 0.6:
+                x_count += 1
+            v_device.SetMasterVolumeLevelScalar(0.6, None)
+            await asyncio.sleep(30)
+        # 下午：每0~10s检查一次
+        elif (now.hour >= 17 and now.minute >= 15) and (now.hour <= 18 and now.minute < 10):
+            v_device = cast(AudioUtilities.GetSpeakers().Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None),
+                            POINTER(IAudioEndpointVolume))
+            if v_device.GetMasterVolumeLevelScalar() != 0.0:
+                x_count += 1
+            v_device.SetMasterVolumeLevelScalar(0.0, None)
+            await asyncio.sleep(random.random() * 10)
+        # 晚自习：设置音量为60
+        elif now.hour == 18 and now.minute == 10:
+            cast(AudioUtilities.GetSpeakers().Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None),
+                 POINTER(IAudioEndpointVolume))\
+                    .SetMasterVolumeLevelScalar(0.6, None)
+            await asyncio.sleep(60)
+
+        await asyncio.sleep(60)
+
+
+async def take_extra_action() -> None:
+    global x_count
+
+    if x_count:
+        ...
+
+    await asyncio.sleep(1)
 
 
 if __name__ == '__main__':
-    while True:
-        try:
-            draw_image(CONFIGURATION['text']['content'] % calc_deltatime(), with_glurge=True)
-            set_wallpaper(CONFIGURATION['image']['output_path'])
-            for i in range(20):
-                try:
-                    volume_control()
-                    sleep(2)  # 在延时中控制音量，延时24s
-                except Exception:
-                    pass
-            sleep(2)
-        except KeyboardInterrupt:  # 方便测试，可以省略
-            set_wallpaper(CONFIGURATION['image']['origin_path'])
-            exit()
-        except Exception:
-            pass
+    x_count: int = 0
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(set_wallpaper())
+    loop.create_task(adjust_volume())
+    loop.create_task(take_extra_action())
+
+    time.sleep(60 - datetime.now().second)
+    loop.run_forever()
