@@ -101,6 +101,7 @@ async def set_wallpaper() -> None:
         draw_image(CONFIGURATION['text']['content'] % calc_deltatime(), with_glurge=True)
         set_wallpaper(CONFIGURATION['image']['output_path'])
         windll.user32.SystemParametersInfoW(0x14, 0, CONFIGURATION['image']['origin_path'], 0)
+
         await asyncio.sleep(60 - (time.monotonic() - start_time))
 
 
@@ -131,17 +132,18 @@ async def adjust_volume() -> None:
                  POINTER(IAudioEndpointVolume))\
                     .SetMasterVolumeLevelScalar(0.6, None)
             await asyncio.sleep(60)
-
-        await asyncio.sleep(60)
+        else:
+            await asyncio.sleep(60)
 
 
 async def take_extra_action() -> None:
     global x_count
 
-    if x_count:
-        ...
+    while True:
+        if x_count:
+            ...
 
-    await asyncio.sleep(1)
+        await asyncio.sleep(1)
 
 
 if __name__ == '__main__':
