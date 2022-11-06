@@ -53,8 +53,8 @@ def volume_control():
         volume = cast(interface, POINTER(IAudioEndpointVolume))
         vr = volume.GetVolumeRange()  # 这一段用于防止切换设备，但是频繁操作中会出现随机性错误，pass掉即可
         if eval(str(volume.GetMasterVolumeLevel())) + 33 >= 0:
-            volume.SetMasterVolumeLevel(vr[0]/3, None)  # 新闻联播，留声音
-    elif (datetime.now().hour == 12 and datetime.now().minute == 51) or (datetime.now().hour == 18 and datetime.now().minute == 11) or:
+            volume.SetMasterVolumeLevel(vr[0]/8, None)  # 新闻联播，留声音
+    elif (datetime.now().hour == 12 and datetime.now().minute == 51) or (datetime.now().hour == 18 and datetime.now().minute == 11):
         volume.SetMasterVolumeLevel(vr[0]/10, None)
     else:
         pass
@@ -128,11 +128,13 @@ if __name__ == '__main__':
         try:
             draw_image(CONFIGURATION['text']['content'] % calc_deltatime(), with_glurge=True)
             set_wallpaper(CONFIGURATION['image']['output_path'])
-            try:
-                volume_control()
-            except Exception:
-                pass
-            sleep(23)  # 在延时中控制音量，延时24s
+            for i in range(20):
+                try:
+                    volume_control()
+                    sleep(2)  # 在延时中控制音量，延时24s
+                except Exception:
+                    pass
+            sleep(2)
         except KeyboardInterrupt:  # 方便测试，可以省略
             set_wallpaper(CONFIGURATION['image']['origin_path'])
             exit()
